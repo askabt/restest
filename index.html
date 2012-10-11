@@ -1,0 +1,140 @@
+<!doctype html>
+<html>
+	<head>
+		<title>API tester</title>
+		<style>
+			html, body, select, option, input, textarea, button {
+				font: 300 14px/16px "Source Code Pro", monospace;
+				margin: 0; padding: 0; border: 0;
+			}
+			body {
+				width: 800px; margin: 20px auto; padding: 8px;
+				background: #eee; color: #000;
+			}
+			header { font-size: 28px; font-weight: 100; text-align: center; padding: 20px 0; }
+			p { padding: 0; margin: 4px 0; clear: both; }
+			select { padding: 6px 0; }
+			select, option, input, textarea, button {
+				background: #fff; color: #000; border: none;
+				height: 32px; vertical-align: top; z-index: 1;
+			}
+			select:focus, option:focus, input:focus, textarea:focus, button:focus {
+				outline: none; box-shadow: 0 3px 3px -3px #00f;
+			}
+			*[disabled] { color: #999; }
+			button {
+				font-weight: 700; background: #000; color: #fff;
+			}
+			
+			textarea {
+				height: 288px; resize: vertical; padding: 8px 0;
+				-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4;
+				-ms-tab-size: 4; tab-size:4;
+			}
+			
+			.w3  { width: 25%; }
+			.w6  { width: 50%; }
+			.w9  { width: 75%; }
+			.w12 { width: 100%; }
+			.fl { float: left; }
+			.fr { float: right; }
+			
+			.nl { margin-right: 2px; margin-left: -2px; }
+			.nr { margin-left: 2px; margin-right: -2px; }
+			
+			.tall { height: 324px; }
+			
+			.error { background: #f66; }
+			
+		</style>
+	</head>
+	<body>
+		<header>HTTP API Tester</header>
+		<form class="fl w6 nl">
+			<p>Request</p>
+			<p>
+				<select id="method" class="w3">
+					<option value="get">GET</option>
+					<option value="put">PUT</option>
+					<option value="POST">POST</option>
+					<option value="delete">DELETE</option>
+				</select><input id="url" value="/" class="w9"/>
+			</p>
+			<p><textarea id="data" class="w12"></textarea></p>
+			<p><button id="submit" type="submit" class="w3 fr">Send</button>
+			HTTP headers (optional) and POST data separated by a blank line. Hit
+			enter thrice to submit.</p>
+		</form>
+		<div class="fr w6 nr">
+			<p>Response:</p>
+			<p><textarea id="response" readonly class="w12 tall"></textarea></p>
+		</div>
+		<script src="http://code.jquery.com/jquery.min.js"></script>
+		<script>
+			$(document).ready(function() {
+				$("form").submit(function(evt) {
+					var data = $("#data").val().split("\n\n"),
+						headers = "", postdata;
+					
+					if(data.length > 1) {
+						postdata = data[1]; headers = data[0];
+					}
+					else {
+						postdata = data[0];
+					}
+					
+					try { JSON.parse(postdata); }
+					catch(e) { console.log(postdata + " is not JSON"); }
+					
+					$.ajax({
+						url: $("#url").val(),
+						type: $("#method").val(),
+						data: postdata,
+						dataType: "text",
+						success: function(data) {
+							try {
+								data = JSON.stringify(JSON.parse(data), null, 2);
+								$("#response").removeClass('error')
+							} catch(e) {
+								data = e + '\n' + data;
+								$("#response").addClass('error');
+							}
+							$("#response").val(data);
+						},
+						error: function(xhr, txt, err) {
+							$("#response").val(txt + "\n" + err).addClass('error');
+						}
+					});
+					
+					evt.preventDefault();
+					return false;
+				});
+				
+				$("#data").keydown(function(evt) {
+					var start = this.selectionStart,
+						end = this.selectionEnd,
+						pre = this.value.substring(0, start),
+						post = this.value.substring(end),
+						repl = false;
+						
+					if(evt.which == 9) {
+						repl = "\t";
+					}
+					if(evt.which == 13) {
+						if(/\n\n$/.test(pre)) {
+							this.value = pre.substring(0, start-2);
+							$("#submit").focus(); return;
+						}
+						repl = '\n' + (/[\s\S]*(^|\n)([\t ]*).*$/m.exec(pre)[2]);
+					}
+					
+					if(repl !== false) {
+						this.value = pre + repl + post;
+						this.selectionStart = this.selectionEnd = start + repl.length;
+						evt.preventDefault();
+					}
+				});
+			});
+		</script>
+	</body>
+</html>
